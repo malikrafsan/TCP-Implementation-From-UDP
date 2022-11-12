@@ -1,8 +1,9 @@
 import lib.connection
 from lib.segment import Segment
 import lib.segment as segment
-from inc.ClientConfig import config
-from inc.ServerConfig import config as server_config
+# from inc.ClientConfig import config
+# from inc.ServerConfig import config as server_config
+import configparser as cp
 
 FILE_PATH = "a.txt"
 
@@ -16,14 +17,21 @@ class Client:
         # self.server_addr = (input("Enter server IP: "), int(input("Enter server port: ")))
 
         # ===================== DEBUG =====================
-        self.ip = config.IP
-        self.port = config.PORT
+        self.client_config = cp.ConfigParser()
+        self.client_config.read("inc/client-config.ini")
+        
+        self.server_config = cp.ConfigParser()
+        self.server_config.read("inc/server-config.ini")
+        
+        self.ip = self.client_config["CONN"]["IP"]
+        self.port = int(self.client_config["CONN"]["PORT"])
         self.filePath = FILE_PATH
-        self.server_addr = (server_config.IP, server_config.PORT)
+        self.server_addr = (
+            self.server_config["CONN"]["IP"], int(self.server_config["CONN"]["PORT"]))
         # ===================== DEBUG =====================
 
         self.connection = lib.connection.Connection(self.ip, self.port)
-        self.windowSize = config.WINDOW_SIZE
+        self.windowSize = int(self.client_config["CONN"]["WINDOW_SIZE"])
         print("[!] Client initialized at " + self.ip + ":" + str(self.port))
         
 
