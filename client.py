@@ -1,7 +1,10 @@
 import lib.connection
 from lib.segment import Segment
 import lib.segment as segment
-from config import *
+from inc.ClientConfig import config
+from inc.ServerConfig import config as server_config
+
+FILE_PATH = "a.txt"
 
 class Client:
     def __init__(self):
@@ -13,14 +16,14 @@ class Client:
         # self.server_addr = (input("Enter server IP: "), int(input("Enter server port: ")))
 
         # ===================== DEBUG =====================
-        self.ip = CLIENT_IP
-        self.port = CLIENT_PORT
-        self.filePath = CLIENT_FILE_PATH
-        self.server_addr = (SERVER_IP, SERVER_PORT)
+        self.ip = config.IP
+        self.port = config.PORT
+        self.filePath = FILE_PATH
+        self.server_addr = (server_config.IP, server_config.PORT)
         # ===================== DEBUG =====================
 
         self.connection = lib.connection.Connection(self.ip, self.port)
-        self.windowSize = 1024
+        self.windowSize = config.WINDOW_SIZE
         print("[!] Client initialized at " + self.ip + ":" + str(self.port))
         
 

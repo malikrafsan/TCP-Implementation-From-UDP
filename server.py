@@ -2,7 +2,10 @@ import lib.connection
 from lib.segment import Segment
 import lib.segment as segment
 import math
-from config import *
+from inc.ServerConfig import config
+
+# TODO: remove later
+FILE_PATH = "README.md"
 
 class Server:
     def __init__(self):
@@ -12,9 +15,9 @@ class Server:
         # self.filePath = input("Enter file source path: ")
 
         # ===================== DEBUG =====================
-        self.ip = SERVER_IP
-        self.port = SERVER_PORT
-        self.filePath = SERVER_FILE_PATH
+        self.ip = config.IP
+        self.port = config.PORT
+        self.filePath = FILE_PATH
         # ===================== DEBUG =====================
 
         self.connection = lib.connection.Connection(self.ip, self.port)
