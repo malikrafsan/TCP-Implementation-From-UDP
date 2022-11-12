@@ -64,6 +64,11 @@ class Segment:
 
     def get_bytes(self) -> bytes:
         # Convert this object to pure bytes
+
+        ## ----[DELETE LATER]----
+        return b"Hello World"
+        ## ----------------------
+
         pass
 
 

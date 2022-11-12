@@ -1,0 +1,7 @@
+SERVER_IP = "localhost"
+SERVER_PORT = 8080
+SERVER_FILE_PATH = "README.md"
+
+CLIENT_IP = "localhost"
+CLIENT_PORT = 8081
+CLIENT_FILE_PATH = "a.txt"

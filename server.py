@@ -1,15 +1,48 @@
 import lib.connection
 from lib.segment import Segment
 import lib.segment as segment
+import math
+from config import *
 
 class Server:
     def __init__(self):
         # Init server
-        pass
+        # self.ip = input("Enter server IP: ")
+        # self.port = int(input("Enter server port: "))
+        # self.filePath = input("Enter file source path: ")
+
+        # ===================== DEBUG =====================
+        self.ip = SERVER_IP
+        self.port = SERVER_PORT
+        self.filePath = SERVER_FILE_PATH
+        # ===================== DEBUG =====================
+
+        self.connection = lib.connection.Connection(self.ip, self.port)
+
+        fileReader = open(self.filePath, "rb")
+        self.file = fileReader.read()
+        self.fileSize = fileReader.tell()
+        fileReader.close()
+
+        self.windowSize = 1024
+        self.segmentCount = math.ceil(self.fileSize / self.windowSize)
+        self.ackTimeout = 5
+        print("[!] Server initialized at " + self.ip + ":" + str(self.port))
 
     def listen_for_clients(self):
         # Waiting client for connect
-        pass
+        active = True
+        print("[!] Waiting for client...")
+        while active:
+            data, client_addr = self.connection.listen_single_segment()
+            print("[!] Client connected from " + client_addr[0] + ":" + str(client_addr[1]))
+            # if segment_checksum:
+            #     if segment.get_flag().SYN:
+            #         if self.three_way_handshake(client_addr):
+            #             print(f"[!] Client with address {client_addr[0]}:{client_addr[1]} connected")
+            # else:
+            #     print("Invalid checksum, ignore this segment")
+            
 
     def start_file_transfer(self):
         # Handshake & file transfer for all client
