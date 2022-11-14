@@ -16,7 +16,11 @@ class SegmentFlag:
                 "fin": flag & FIN_FLAG
             }
         else:
-            self._flags = {}
+            self._flags = {
+                "syn": 0,
+                "ack": 0,
+                "fin": 0
+            }
 
     def get_flag_int(self) -> int:
         # Convert this object to flag in byte form

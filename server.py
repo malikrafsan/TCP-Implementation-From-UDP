@@ -41,14 +41,16 @@ class Server:
         active = True
         print("[!] Waiting for client...")
         while active:
-            data, client_addr = self.connection.listen_single_segment()
-            print("[!] Client connected from " + client_addr[0] + ":" + str(client_addr[1]))
-            # if segment_checksum:
-            #     if segment.get_flag().SYN:
-            #         if self.three_way_handshake(client_addr):
-            #             print(f"[!] Client with address {client_addr[0]}:{client_addr[1]} connected")
-            # else:
-            #     print("Invalid checksum, ignore this segment")
+            client_addr, segment, checksum_status = self.connection.listen_single_segment()
+            print("[!] Client trying to connect from " + client_addr[0] + ":" + str(client_addr[1]))
+            if checksum_status:
+                if segment.get_flag()["syn"]:
+                    if self.three_way_handshake(client_addr):
+                        print(f"[!] Client with address {client_addr[0]}:{client_addr[1]} connected")
+
+                        
+            else:
+                print("Invalid checksum, ignore this segment")
             
 
     def start_file_transfer(self):
@@ -61,7 +63,23 @@ class Server:
 
     def three_way_handshake(self, client_addr: ("ip", "port")) -> bool:
        # Three way handshake, server-side, 1 client
-       pass
+        print("[!] Start three way handshake")
+        syn_ack_segment = Segment()
+        syn_ack_segment.set_flag([segment.SYN_FLAG, segment.ACK_FLAG])
+        self.connection.send_data(syn_ack_segment, client_addr)
+        print("[!] SYN-ACK sent, waiting for ACK")
+        addr, ack_segment, checksum_status = self.connection.listen_single_segment()
+        if addr == client_addr and checksum_status:
+            if ack_segment.get_flag()["ack"]:
+                print("[!] ACK received, handshake completed")
+                return True
+            else:
+                print("[!] ACK not received, handshake failed")
+                return False
+        else:
+            print("[!] Invalid checksum, handshake failed")
+            return False
+
 
 
 if __name__ == '__main__':

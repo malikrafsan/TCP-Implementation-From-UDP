@@ -13,13 +13,14 @@ class Connection:
         # Send single segment into destination
         self.socket.sendto(msg.get_bytes(), dest)
 
-    def listen_single_segment(self) -> Segment:
+    # def listen_single_segment(self) -> Segment:
+    def listen_single_segment(self):
         # Listen single UDP datagram within timeout and convert into segment
         data, addr = self.socket.recvfrom(1024)
-        # segment = Segment()
-        # segment.set_from_bytes(data)
-        # segment_checksum = segment.valid_checksum()
-        # return addr, segment, segment_checksum
+        segment = Segment()
+        segment.set_from_bytes(data)
+        segment_checksum = segment.valid_checksum()
+        return addr, segment, segment_checksum
         return data, addr
 
     def close_socket(self):

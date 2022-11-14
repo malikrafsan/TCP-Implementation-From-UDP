@@ -37,10 +37,26 @@ class Client:
 
     def three_way_handshake(self):
         # Three Way Handshake, client-side
-        print("[!] Trying to connect to " + self.server_addr[0] + ":" + str(self.server_addr[1]))
         print("[!] Start three way handshake")
+        print("[!] Sending SYN segment to server " + self.server_addr[0] + ":" + str(self.server_addr[1]))
         syn_segment = Segment()
+        syn_segment.set_flag([segment.SYN_FLAG])
         self.connection.send_data(syn_segment, self.server_addr)
+
+        print("[!] SYN sent, waiting for SYN-ACK")
+        addr, syn_ack_segment, checksum_status = self.connection.listen_single_segment()
+        if checksum_status:
+            if syn_ack_segment.get_flag()["syn"] and syn_ack_segment.get_flag()["ack"]:
+                print("[!] SYN-ACK received")
+                ack_segment = Segment()
+                ack_segment.set_flag([segment.ACK_FLAG])
+                self.connection.send_data(ack_segment, self.server_addr)
+                print("[!] ACK sent")
+                print("[!] Connection established")
+            else:
+                print("[!] Connection failed")
+        else:
+            print("[!] Connection failed")
 
     def listen_file_transfer(self):
         # File transfer, client-side
