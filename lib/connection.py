@@ -21,7 +21,6 @@ class Connection:
         segment.set_from_bytes(data)
         segment_checksum = segment.valid_checksum()
         return addr, segment, segment_checksum
-        return data, addr
 
     def close_socket(self):
         # Release UDP socket

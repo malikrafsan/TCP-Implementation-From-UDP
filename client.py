@@ -1,6 +1,7 @@
 import lib.connection
 from lib.segment import Segment
 import lib.segment as segment
+from lib.filehandler import BufferFileHandler
 # from inc.ClientConfig import config
 # from inc.ServerConfig import config as server_config
 import configparser as cp
@@ -60,8 +61,57 @@ class Client:
 
     def listen_file_transfer(self):
         # File transfer, client-side
-        pass
-
+        print("[!] Listen file transfer")
+        
+        stop = False
+        cur_num = 0
+        file_handler = BufferFileHandler(self.filePath, "wb")
+        while not stop:
+            try:
+                addr, segment, checksum_status = self.connection.listen_single_segment()
+                self.__display_info_segment(addr, segment, checksum_status)
+                
+                if addr != self.server_addr:
+                    print("[!] Segment not from server, ignore")
+                    continue
+                if not checksum_status:
+                    print("[!] Checksum failed, ignore")
+                    continue
+                if segment.get_flag()["fin"]:
+                    print("[!] FIN received, stop")
+                    stop = True
+                    print("[!] Sending ACK to stop connection")
+                    self.__send_ack_stop()
+                if segment.get_header()["seq_num"] != cur_num:
+                    print("[!] Segment not in order, ignore")
+                    continue
+                
+                print("[!] Segment in order, write to file")
+                file_handler.write(segment.get_payload())
+                self.__send_ack_seq(cur_num)
+                cur_num += 1
+            except Exception as e:
+                print("[!] Exception: " + str(e))
+                break
+                
+    
+    def __display_info_segment(self, addr, segment, checksum_status):
+        print(f"[!] Received Segment {segment}")
+        print(f"[!] Checksum status: {checksum_status}")
+        print(f"[!] Addr: {addr}")
+        
+    def __send_ack_stop(self):
+        data = Segment()
+        data.set_flag([segment.ACK_FLAG])
+        self.connection.send_data(data, self.server_addr)
+        print(f"[!] ACK stop sent to server {self.server_addr[0]}:{self.server_addr[1]}")
+    
+    def __send_ack_seq(self, i):
+        data = Segment()
+        data.set_flag([segment.ACK_FLAG])
+        data.set_header({"seq_num": 0, "ack_num": i})
+        self.connection.send_data(data, self.server_addr)
+        print(f"[!] ACK sent for seq {i} to server {self.server_addr[0]}:{self.server_addr[1]}")
 
 if __name__ == '__main__':
     main = Client()
