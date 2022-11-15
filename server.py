@@ -8,7 +8,7 @@ import configparser as cp
 import socket
 
 # TODO: remove later
-FILE_PATH = "README.md"
+FILE_PATH = "generate.txt"
 
 class Server:
     def __init__(self):
@@ -61,14 +61,24 @@ class Server:
     def __send_segments(self, seq_bound_window, seq_bases, client_addr):
         print(f"[!] Sending segments from {seq_bases} to {seq_bound_window}")
         
+        stop = False
+        stopIdx = -1
         file_handler = BufferFileHandler(self.filePath, "rb")
         for i in range(seq_bound_window):
             content = file_handler.get_content(seq_bases + i)
+            print(f"\n\n[!] Content: {content}")
+            if (content == b''):
+                print(f"[!] EOF with i: {seq_bases + i}")
+                stop = True
+                stopIdx = seq_bases + i
+                
             segment = Segment()
             segment.set_payload(content)
             segment.set_header({"seq_num": seq_bases+i, "ack_num": 0})
             self.connection.send_data(segment, client_addr)
             print("[!] Segment " + str(seq_bases + i) + " sent")
+
+        return stop, stopIdx
 
     def file_transfer(self, client_addr : ("ip", "port")):
         # File transfer, server-side, Send file to 1 client
@@ -77,11 +87,15 @@ class Server:
         seq_bases = 0
         seq_bound_window = min(self.segmentCount, seq_bases + self.windowSize) - seq_bases
         
+        stop = False
         while (seq_bases < self.segmentCount):
-            print(f"[!] Sending segments from {seq_bases} to {seq_bound_window}")
-            self.__send_segments(seq_bound_window, seq_bases, client_addr)
+            if stop:
+                break
             
-            seq_bases_max = seq_bases + self.windowSize
+            print(f"[!] Sending segments from {seq_bases} to {seq_bound_window}")
+            stop, stopIdx = self.__send_segments(seq_bound_window, seq_bases, client_addr)
+            
+            seq_bases_max = (seq_bases + self.windowSize) if not stop else stopIdx
             print(f"[!] Waiting for ACK from {seq_bases} to {seq_bound_window} with seq_bases_max = {seq_bases_max}")
             while seq_bases < seq_bases_max:
                 print(f"[!] Waiting for ACK {seq_bases} till seq_bases_max {seq_bases_max}")
