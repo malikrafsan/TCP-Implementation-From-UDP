@@ -28,8 +28,9 @@ class Client:
         self.filePath = FILE_PATH
         self.server_addr = (
             self.server_config["CONN"]["IP"], int(self.server_config["CONN"]["PORT"]))
-        self.handshake_timeout = int(self.server_config["CONN"]["HANDSHAKE_TIMEOUT"])
-        self.regular_timeout = int(self.server_config["CONN"]["REGULAR_TIMEOUT"])
+        self.handshake_timeout = int(self.client_config["CONN"]["HANDSHAKE_TIMEOUT"])
+        self.regular_timeout = int(
+            self.client_config["CONN"]["REGULAR_TIMEOUT"])
         # ===================== DEBUG =====================
 
         self.connection = lib.connection.Connection(self.ip, self.port)

@@ -45,15 +45,19 @@ class Server:
         active = True
         print("[!] Waiting for client...")
         while active:
-            client_addr, segment, checksum_status = self.connection.listen_single_segment()
-            print("[!] Client trying to connect from " + client_addr[0] + ":" + str(client_addr[1]))
-            if checksum_status:
-                if segment.get_flag()["syn"]:
-                    if self.three_way_handshake(client_addr):
-                        print(f"[!] Client with address {client_addr[0]}:{client_addr[1]} connected")
-                        self.file_transfer(client_addr)                        
-            else:
-                print("Invalid checksum, ignore this segment")
+            try:
+                client_addr, segment, checksum_status = self.connection.listen_single_segment()
+                print("[!] Client trying to connect from " + client_addr[0] + ":" + str(client_addr[1]))
+                if checksum_status:
+                    if segment.get_flag()["syn"]:
+                        if self.three_way_handshake(client_addr):
+                            print(f"[!] Client with address {client_addr[0]}:{client_addr[1]} connected")
+                            self.file_transfer(client_addr)                        
+                else:
+                    print("Invalid checksum, ignore this segment")
+            except socket.timeout as e:
+                print(f"[!] no client found {e}")
+                pass
             
 
     def start_file_transfer(self):
