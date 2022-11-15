@@ -9,6 +9,7 @@ import socket
 
 # TODO: remove later
 FILE_PATH = "generate.txt"
+BUFFER_SIZE = 32756
 
 class Server:
     def __init__(self):
@@ -34,8 +35,9 @@ class Server:
         fileReader.close()
 
         self.windowSize = int(self.config["CONN"]["WINDOW_SIZE"])
-        self.segmentCount = math.ceil(self.fileSize / self.windowSize)
-        self.ackTimeout = 5
+        self.segmentCount = math.ceil(self.fileSize / BUFFER_SIZE)
+        self.ackTimeout = int(self.config["CONN"]["TIMEOUT"])
+        self.connection.set_timeout(self.ackTimeout)
         print("[!] Server initialized at " + self.ip + ":" + str(self.port))
 
     def listen_for_clients(self):
@@ -125,6 +127,7 @@ class Server:
                             print(f"[!] ACK {ack_num} below seq_bases {seq_bases} received, ignore")
                     
                 except socket.timeout:
+                    print(f"[!] Timeout, resend segments from {seq_bases} to {seq_bound_window}")
                     break
                 
                 except Exception as e:
@@ -149,23 +152,28 @@ class Server:
         self.connection.send_data(data, client_addr)
 
     def three_way_handshake(self, client_addr: ("ip", "port")) -> bool:
-       # Three way handshake, server-side, 1 client
+        # Three way handshake, server-side, 1 client
         print("[!] Start three way handshake")
         syn_ack_segment = Segment()
         syn_ack_segment.set_flag([segment.SYN_FLAG, segment.ACK_FLAG])
         self.connection.send_data(syn_ack_segment, client_addr)
         print("[!] SYN-ACK sent, waiting for ACK")
         addr, ack_segment, checksum_status = self.connection.listen_single_segment()
-        if addr == client_addr and checksum_status:
-            if ack_segment.get_flag()["ack"]:
-                print("[!] ACK received, handshake completed")
-                return True
+        # TODO: check if addr is the same, if not listen again
+        # cover case where multiple clients
+        try:
+            if addr == client_addr and checksum_status:
+                if ack_segment.get_flag()["ack"]:
+                    print("[!] ACK received, handshake completed")
+                    return True
+                else:
+                    print("[!] ACK not received, handshake failed")
+                    return False
             else:
-                print("[!] ACK not received, handshake failed")
+                print("[!] Invalid checksum, handshake failed")
                 return False
-        else:
-            print("[!] Invalid checksum, handshake failed")
-            return False
+        except socket.timeout as e:
+            print(f"[!] timeout, handshake failed {e}")
 
 if __name__ == '__main__':
     main = Server()

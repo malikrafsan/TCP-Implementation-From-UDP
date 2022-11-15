@@ -2,8 +2,7 @@ import lib.connection
 from lib.segment import Segment
 import lib.segment as segment
 from lib.filehandler import BufferFileHandler
-# from inc.ClientConfig import config
-# from inc.ServerConfig import config as server_config
+import socket
 import configparser as cp
 
 FILE_PATH = "readme2.md"
@@ -29,6 +28,8 @@ class Client:
         self.filePath = FILE_PATH
         self.server_addr = (
             self.server_config["CONN"]["IP"], int(self.server_config["CONN"]["PORT"]))
+        self.handshake_timeout = int(self.server_config["CONN"]["HANDSHAKE_TIMEOUT"])
+        self.regular_timeout = int(self.server_config["CONN"]["REGULAR_TIMEOUT"])
         # ===================== DEBUG =====================
 
         self.connection = lib.connection.Connection(self.ip, self.port)
@@ -38,6 +39,8 @@ class Client:
 
     def three_way_handshake(self):
         # Three Way Handshake, client-side
+        self.connection.set_timeout(self.handshake_timeout)
+        
         print("[!] Start three way handshake")
         print("[!] Sending SYN segment to server " + self.server_addr[0] + ":" + str(self.server_addr[1]))
         syn_segment = Segment()
@@ -45,19 +48,22 @@ class Client:
         self.connection.send_data(syn_segment, self.server_addr)
 
         print("[!] SYN sent, waiting for SYN-ACK")
-        addr, syn_ack_segment, checksum_status = self.connection.listen_single_segment()
-        if checksum_status:
-            if syn_ack_segment.get_flag()["syn"] and syn_ack_segment.get_flag()["ack"]:
-                print("[!] SYN-ACK received")
-                ack_segment = Segment()
-                ack_segment.set_flag([segment.ACK_FLAG])
-                self.connection.send_data(ack_segment, self.server_addr)
-                print("[!] ACK sent")
-                print("[!] Connection established")
+        try:
+            addr, syn_ack_segment, checksum_status = self.connection.listen_single_segment()
+            if checksum_status:
+                if syn_ack_segment.get_flag()["syn"] and syn_ack_segment.get_flag()["ack"]:
+                    print("[!] SYN-ACK received")
+                    ack_segment = Segment()
+                    ack_segment.set_flag([segment.ACK_FLAG])
+                    self.connection.send_data(ack_segment, self.server_addr)
+                    print("[!] ACK sent")
+                    print("[!] Connection established")
+                else:
+                    print("[!] Connection failed")
             else:
                 print("[!] Connection failed")
-        else:
-            print("[!] Connection failed")
+        except socket.timeout as e:
+            print(f"[!] Connection timeout: {str(e)}")
 
     def listen_file_transfer(self):
         # File transfer, client-side
