@@ -6,7 +6,7 @@ from lib.filehandler import BufferFileHandler
 # from inc.ServerConfig import config as server_config
 import configparser as cp
 
-FILE_PATH = "a.txt"
+FILE_PATH = "readme2.md"
 
 class Client:
     def __init__(self):
@@ -82,6 +82,8 @@ class Client:
                     stop = True
                     print("[!] Sending ACK to stop connection")
                     self.__send_ack_stop()
+                    print("[!] Connection closed")
+                    break
                 if segment.get_header()["seq_num"] != cur_num:
                     print("[!] Segment not in order, ignore")
                     continue

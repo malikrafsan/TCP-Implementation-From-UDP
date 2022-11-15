@@ -66,7 +66,7 @@ class Server:
         file_handler = BufferFileHandler(self.filePath, "rb")
         for i in range(seq_bound_window):
             content = file_handler.get_content(seq_bases + i)
-            print(f"\n\n[!] Content: {content}")
+            # print(f"\n\n[!] Content: {content}")
             if (content == b''):
                 print(f"[!] EOF with i: {seq_bases + i}")
                 stop = True
@@ -101,7 +101,7 @@ class Server:
                 print(f"[!] Waiting for ACK {seq_bases} till seq_bases_max {seq_bases_max}")
                 try:
                     addr, resp, checksum_success = self.connection.listen_single_segment()
-                    print(f"[!] Received Segment {resp}")
+                    # print(f"[!] Received Segment {resp}")
                     print(f"[!] Checksum status: {checksum_success}")
                     print(f"[!] Addr: {addr}")
                     
