@@ -1,5 +1,5 @@
 class BufferFileHandler:
-  BUFFER_SIZE = 32768
+  BUFFER_SIZE = 32756
   
   def __init__(self, path: str, flag:str):
     self.path = path

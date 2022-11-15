@@ -11,12 +11,13 @@ class Connection:
 
     def send_data(self, msg : Segment, dest : ("ip", "port")):
         # Send single segment into destination
+        print(dest)
         self.socket.sendto(msg.get_bytes(), dest)
 
     # def listen_single_segment(self) -> Segment:
     def listen_single_segment(self):
         # Listen single UDP datagram within timeout and convert into segment
-        data, addr = self.socket.recvfrom(1024)
+        data, addr = self.socket.recvfrom(32768)
         segment = Segment()
         segment.set_from_bytes(data)
         segment_checksum = segment.valid_checksum()
