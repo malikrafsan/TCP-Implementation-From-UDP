@@ -4,8 +4,11 @@ import lib.segment as segment
 from lib.filehandler import BufferFileHandler
 import socket
 import configparser as cp
+from lib.logger import Logger
 
 FILE_PATH = "readme2.md"
+
+logger = Logger()
 
 class Client:
     def __init__(self):
@@ -35,42 +38,42 @@ class Client:
 
         self.connection = lib.connection.Connection(self.ip, self.port)
         self.windowSize = int(self.client_config["CONN"]["WINDOW_SIZE"])
-        print("[!] Client initialized at " + self.ip + ":" + str(self.port))
+        logger.log("[!] Client initialized at " + self.ip + ":" + str(self.port))
         
 
     def three_way_handshake(self):
         # Three Way Handshake, client-side
         self.connection.set_timeout(self.handshake_timeout)
         
-        print("[!] Start three way handshake")
-        print("[!] Sending SYN segment to server " + self.server_addr[0] + ":" + str(self.server_addr[1]))
+        logger.log("[!] Start three way handshake")
+        logger.log("[!] Sending SYN segment to server " + self.server_addr[0] + ":" + str(self.server_addr[1]))
         syn_segment = Segment()
         syn_segment.set_flag([segment.SYN_FLAG])
         self.connection.send_data(syn_segment, self.server_addr)
 
-        print("[!] SYN sent, waiting for SYN-ACK")
+        logger.log("[!] SYN sent, waiting for SYN-ACK")
         try:
             addr, syn_ack_segment, checksum_status = self.connection.listen_single_segment()
             if checksum_status:
                 if syn_ack_segment.get_flag()["syn"] and syn_ack_segment.get_flag()["ack"]:
-                    print("[!] SYN-ACK received")
+                    logger.log("[!] SYN-ACK received")
                     ack_segment = Segment()
                     ack_segment.set_flag([segment.ACK_FLAG])
                     self.connection.send_data(ack_segment, self.server_addr)
-                    print("[!] ACK sent")
-                    print("[!] Connection established")
+                    logger.log("[!] ACK sent")
+                    logger.log("[!] Connection established")
                 else:
-                    print("[!] Connection failed")
+                    logger.log("[!] Connection failed")
             else:
-                print("[!] Connection failed")
+                logger.log("[!] Connection failed")
         except socket.timeout as e:
-            print(f"[!] Connection timeout: {str(e)}")
+            logger.log(f"[!] Connection timeout: {str(e)}")
             exit(1)
 
     def listen_file_transfer(self):
         # File transfer, client-side
         self.connection.set_timeout(self.regular_timeout)
-        print("[!] Listen file transfer")
+        logger.log("[!] Listen file transfer")
         
         stop = False
         cur_num = 0
@@ -81,54 +84,56 @@ class Client:
                 self.__display_info_segment(addr, segment, checksum_status)
                 
                 if addr != self.server_addr:
-                    print("[!] Segment not from server, ignore")
+                    logger.log("[!] Segment not from server, ignore")
                     continue
                 if not checksum_status:
-                    print("[!] Checksum failed, ignore")
+                    logger.log("[!] Checksum failed, ignore")
                     continue
                 if segment.get_flag()["fin"]:
-                    print("[!] FIN received, stop")
+                    logger.log("[!] FIN received, stop")
                     stop = True
-                    print("[!] Sending ACK to stop connection")
+                    logger.log("[!] Sending ACK to stop connection")
                     self.__send_ack_stop()
-                    print("[!] Connection closed")
+                    logger.log("[!] Connection closed")
                     break
-                if segment.get_header()["seq_num"] != cur_num:
-                    print("[!] Segment not in order, ignore")
+
+                seq_num = segment.get_header()["seq_num"]
+                if seq_num != cur_num:
+                    logger.log(f"[!] Segment not in order, expect seq_num {cur_num}, got {seq_num} ignore")
                     continue
                 
-                print("[!] Segment in order, write to file")
+                logger.log("[!] Segment in order, write to file")
                 file_handler.write(segment.get_payload())
                 self.__send_ack_seq(cur_num)
                 cur_num += 1
              
             except socket.timeout as e:
-                print(f"[!] Connection timeout")
+                logger.log(f"[!] Connection timeout")
                 if (cur_num > 0):
-                    print(f"[!] Resend ACK for seq {cur_num-1}")
+                    logger.log(f"[!] Resend ACK for seq {cur_num-1}")
                     self.__send_ack_seq(cur_num - 1)
                 else:
-                    print(f"[!] timeout on first segment, exit")
+                    logger.log(f"[!] timeout on first segment, exit")
                     exit(1)
                 
     
     def __display_info_segment(self, addr, segment, checksum_status):
-        print(f"[!] Received Segment {segment}")
-        print(f"[!] Checksum status: {checksum_status}")
-        print(f"[!] Addr: {addr}")
+        logger.log(f"[!] Received Segment {segment}")
+        logger.log(f"[!] Checksum status: {checksum_status}")
+        logger.log(f"[!] Addr: {addr}")
         
     def __send_ack_stop(self):
         data = Segment()
         data.set_flag([segment.ACK_FLAG])
         self.connection.send_data(data, self.server_addr)
-        print(f"[!] ACK stop sent to server {self.server_addr[0]}:{self.server_addr[1]}")
+        logger.log(f"[!] ACK stop sent to server {self.server_addr[0]}:{self.server_addr[1]}")
     
     def __send_ack_seq(self, i):
         data = Segment()
         data.set_flag([segment.ACK_FLAG])
         data.set_header({"seq_num": 0, "ack_num": i})
         self.connection.send_data(data, self.server_addr)
-        print(f"[!] ACK sent for seq {i} to server {self.server_addr[0]}:{self.server_addr[1]}")
+        logger.log(f"[!] ACK sent for seq {i} to server {self.server_addr[0]}:{self.server_addr[1]}")
 
 if __name__ == '__main__':
     main = Client()
