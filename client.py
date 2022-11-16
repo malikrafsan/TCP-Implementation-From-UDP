@@ -65,9 +65,11 @@ class Client:
                 print("[!] Connection failed")
         except socket.timeout as e:
             print(f"[!] Connection timeout: {str(e)}")
+            exit(1)
 
     def listen_file_transfer(self):
         # File transfer, client-side
+        self.connection.set_timeout(self.regular_timeout)
         print("[!] Listen file transfer")
         
         stop = False
@@ -99,9 +101,12 @@ class Client:
                 file_handler.write(segment.get_payload())
                 self.__send_ack_seq(cur_num)
                 cur_num += 1
-            except Exception as e:
-                print("[!] Exception: " + str(e))
-                break
+             
+            except socket.timeout as e:
+                print(f"[!] Connection timeout")
+                if (cur_num > 0):
+                    print(f"[!] Resend ACK for seq {cur_num-1}")
+                    self.__send_ack_seq(cur_num - 1)
                 
     
     def __display_info_segment(self, addr, segment, checksum_status):

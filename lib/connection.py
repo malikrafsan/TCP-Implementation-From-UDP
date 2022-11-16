@@ -11,7 +11,8 @@ class Connection:
 
     def send_data(self, msg : Segment, dest : ("ip", "port")):
         # Send single segment into destination
-        print(dest)
+        print(f"Send Data to {dest[0]}:{dest[1]}")
+        print(f"Data: {msg}")
         self.socket.sendto(msg.get_bytes(), dest)
 
     # def listen_single_segment(self) -> Segment:

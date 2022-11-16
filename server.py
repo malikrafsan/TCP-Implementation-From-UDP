@@ -52,7 +52,7 @@ class Server:
                     if segment.get_flag()["syn"]:
                         if self.three_way_handshake(client_addr):
                             print(f"[!] Client with address {client_addr[0]}:{client_addr[1]} connected")
-                            self.file_transfer(client_addr)                        
+                            self.file_transfer(client_addr)                    
                 else:
                     print("Invalid checksum, ignore this segment")
             except socket.timeout as e:
