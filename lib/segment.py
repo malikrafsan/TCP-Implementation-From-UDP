@@ -71,7 +71,6 @@ class Segment:
             i += 1
 
         checksum = (c1 << 8) | c0
-        self._checksum = checksum
 
         return (data, checksum)
 
@@ -164,4 +163,13 @@ if __name__ == '__main__':
     print("s2 flag:", s2.get_flag())
     print("s2 head:", s2.get_header())
     print("s2 data:", s2.get_payload())
+    print("s2 byte:", s2.get_bytes())
+    print("s2 len :", len(s2.get_bytes()))
+    print("-- modify s2 data --")
+    s2_bytes = s2.get_bytes()
+    print(s2_bytes[13])
+    s2_bytes = s2_bytes[:13] + b"\x99" + s2_bytes[14:]
+    s2.set_from_bytes(s2_bytes)
+    print("s2 len :", len(s2.get_bytes()))
+    print("s2 valid?", s2.valid_checksum())
     print("s2 byte:", s2.get_bytes())
