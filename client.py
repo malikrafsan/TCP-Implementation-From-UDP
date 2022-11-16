@@ -5,13 +5,14 @@ from lib.filehandler import BufferFileHandler
 import socket
 import configparser as cp
 from lib.logger import Logger
+import argparse
 
 FILE_PATH = "asd.md"
 
 logger = Logger(Logger.MODE_REGULAR)
 
 class Client:
-    def __init__(self):
+    def __init__(self, client_port: int, broadcast_port: int, filepath: str):
         # Init client
         self.client_config = cp.ConfigParser()
         self.client_config.read("inc/client-config.ini")
@@ -20,10 +21,10 @@ class Client:
         self.server_config.read("inc/server-config.ini")
         
         self.ip = self.client_config["CONN"]["IP"]
-        self.port = int(self.client_config["CONN"]["PORT"])
-        self.filePath = FILE_PATH
+        self.port = client_port
+        self.filePath = filepath
         self.server_addr = (
-            self.server_config["CONN"]["IP"], int(self.server_config["CONN"]["PORT"]))
+            self.server_config["CONN"]["IP"], broadcast_port)
         self.handshake_timeout = int(self.client_config["CONN"]["HANDSHAKE_TIMEOUT"])
         self.regular_timeout = int(
             self.client_config["CONN"]["REGULAR_TIMEOUT"])
@@ -128,6 +129,12 @@ class Client:
         logger.log(f"[!] ACK sent for seq {i} to server {self.server_addr[0]}:{self.server_addr[1]}")
 
 if __name__ == '__main__':
-    main = Client()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("[client port]", type=int)
+    parser.add_argument("[broadcast port]", type=int)
+    parser.add_argument("[filepath]", type=str)
+    args = vars(parser.parse_args())
+
+    main = Client(args["[client port]"], args["[broadcast port]"], args["[filepath]"])
     main.three_way_handshake()
     main.listen_file_transfer()

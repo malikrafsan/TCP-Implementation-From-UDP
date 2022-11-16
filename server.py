@@ -7,13 +7,14 @@ import math
 import configparser as cp
 import socket
 from lib.logger import Logger
+import argparse
 
 # TODO: remove later
 FILE_PATH = "generate.txt"
 logger = Logger(Logger.MODE_REGULAR)
 
 class Server:
-    def __init__(self):
+    def __init__(self, port: int, filepath: str):
         # Init server
         # self.ip = input("Enter server IP: ")
         # self.port = int(input("Enter server port: "))
@@ -24,8 +25,8 @@ class Server:
         self.config.read("inc/server-config.ini")
         
         self.ip = self.config["CONN"]["IP"]
-        self.port = int(self.config["CONN"]["PORT"])
-        self.filePath = FILE_PATH
+        self.port = port
+        self.filePath = filepath
         # ===================== DEBUG =====================
 
         self.connection = lib.connection.Connection(self.ip, self.port)
@@ -182,6 +183,11 @@ class Server:
             return False
 
 if __name__ == '__main__':
-    main = Server()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("[broadcast port]", type=int)
+    parser.add_argument("[filepath]", type=str)
+    args = vars(parser.parse_args())
+
+    main = Server(args["[port]"], args["[filepath]"])
     main.listen_for_clients()
     main.start_file_transfer()
