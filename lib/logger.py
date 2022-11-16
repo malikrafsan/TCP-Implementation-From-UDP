@@ -8,7 +8,9 @@ class Logger:
     LEVEL_CRITICAL = 4
 
     MODE_VERBOSE = 0
-    MODE_COMPACT = 1
+    MODE_REGULAR = 1
+    MODE_COMPACT = 2
+    MODE_NO_OUTPUT = 3
 
     def __init__(self, mode=MODE_VERBOSE):
         self.mode = mode
@@ -22,16 +24,21 @@ class Logger:
             stack = inspect.stack()[2]
             msg = f"[{stack.filename}:{stack.lineno} on {stack.function}] | " + msg
 
-        if level == Logger.LEVEL_DEBUG:
-            self.debug(msg)
-        elif level == Logger.LEVEL_INFO:
-            self.info(msg)
-        elif level == Logger.LEVEL_WARNING:
-            self.warning(msg)
-        elif level == Logger.LEVEL_ERROR:
-            self.error(msg)
-        elif level == Logger.LEVEL_CRITICAL:
-            self.critical(msg)
+        if self.mode <= self.MODE_COMPACT:
+            if level == Logger.LEVEL_ERROR:
+                self.error(msg)
+            elif level == Logger.LEVEL_CRITICAL:
+                self.critical(msg)
+        
+        if self.mode <= self.MODE_REGULAR:
+            if level == Logger.LEVEL_INFO:
+                self.info(msg)
+            elif level == Logger.LEVEL_WARNING:
+                self.warning(msg)
+        
+        if self.mode <= self.MODE_VERBOSE:
+            if level == Logger.LEVEL_DEBUG:
+                self.debug(msg)
 
     def debug(self, msg):
         print("[DEBUG] " + msg)
