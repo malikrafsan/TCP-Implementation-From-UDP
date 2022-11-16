@@ -37,7 +37,7 @@ class Server:
         fileReader.close()
 
         self.windowSize = int(self.config["CONN"]["WINDOW_SIZE"])
-        self.buffer_size = int(self.config["CONN"]["BUFFER_SIZE"]) - 12
+        self.buffer_size = (int(self.config["CONN"]["BUFFER_SIZE"]) - 12) // 3
         self.segmentCount = math.ceil(self.fileSize / self.buffer_size)
         self.ackTimeout = int(self.config["CONN"]["TIMEOUT"])
         self.connection.set_timeout(self.ackTimeout)
@@ -59,6 +59,7 @@ class Server:
                         if prompt != 'y':
                             listening = False                
                 else:
+                    logger.critical("[!!!] CHECKSUM FAILED")
                     logger.log("Invalid checksum, ignore this segment")
             except socket.timeout as e:
                 logger.log(f"[!] No client found {e}")
@@ -119,7 +120,7 @@ class Server:
                         logger.log(f"[!] [CLIENT {client_no}]  Segment from unknown client, ignore")
                         continue
                     if not checksum_success:
-                        logger.log(f"[!] [CLIENT {client_no}] Invalid checksum, ignore")
+                        logger.critical(f"[!!!] [CLIENT {client_no}] Invalid checksum, ignore")
                         continue
                     if (resp.get_flag()["ack"]):
                         ack_num = resp.get_header()["ack_num"]

@@ -1,4 +1,5 @@
 import struct
+import copy
 
 # Constants
 SYN_FLAG = 0b00010
@@ -81,7 +82,14 @@ class Segment:
         self._ack_num = header["ack_num"]
 
     def set_payload(self, payload: bytes):
-        self._payload = payload
+        self._payload = self.__copy_payload(payload)
+
+    def __copy_payload(self, payload):
+        p1 = bytearray(copy.deepcopy(payload))
+        p2 = bytearray(copy.deepcopy(payload))
+        p3 = bytearray(copy.deepcopy(payload))
+
+        return bytes(p1 + p2 + p3)
 
     def set_flag(self, flag_list: list):
         flags = 0b0
@@ -102,7 +110,41 @@ class Segment:
         }
 
     def get_payload(self) -> bytes:
-        return self._payload
+        arr = bytearray(self._payload)
+        return bytes(arr[:len(arr)//3])
+    
+    def error_correction(self):
+        self._payload = self.__error_correcting(self._payload)
+
+    def __error_correcting(self):
+        arrcontent = bytearray(self._payload)
+        ln = len(arrcontent)
+
+        c1 = arrcontent[:ln//3]
+        c2 = arrcontent[ln//3:ln//3*2]
+        c3 = arrcontent[ln//3*2:]
+
+        return self.__correcting(c1, c2, c3)
+
+    def __correcting(self, c1, c2, c3):
+        arrc1 = bytearray(c1)
+        arrc2 = bytearray(c2)
+        arrc3 = bytearray(c3)
+
+        res = bytearray()
+        ln = min(len(arrc1), len(arrc2), len(arrc3))
+        for i in range(ln):
+            if arrc1[i] == arrc2[i]:
+                res.append(arrc1[i])
+            elif arrc1[i] == arrc3[i]:
+                res.append(arrc1[i])
+            elif arrc2[i] == arrc3[i]:
+                res.append(arrc2[i])
+            else:
+                res.append(arrc1[i])
+
+        return bytes(res)
+
 
     # -- Marshalling --
 
@@ -133,7 +175,13 @@ class Segment:
         # Use __calculate_checksum() and check integrity of this object
         _, checksum = self.__calculate_checksum()
 
-        return checksum == self._checksum
+        valid = (checksum == self._checksum)
+        if not valid:
+            self.error_correction()
+            _, checksum = self.__calculate_checksum()
+            valid = (checksum == self._checksum)
+        
+        return valid
 
 
 # testing

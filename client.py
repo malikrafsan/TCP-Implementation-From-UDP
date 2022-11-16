@@ -59,6 +59,7 @@ class Client:
                 else:
                     logger.log("[!] Connection failed")
             else:
+                logger.critical("[!!!] CHECKSUM FAILED")
                 logger.log("[!] Connection failed")
         except socket.timeout as e:
             logger.log(f"[!] Connection timeout: {str(e)}")
@@ -82,6 +83,7 @@ class Client:
                     continue
                 if not checksum_status:
                     logger.log("[!] Checksum failed, ignore")
+                    logger.critical("[!!!] CHECKSUM FAILED")
                     continue
                 if segment.get_flag()["fin"]:
                     logger.log("[!] FIN received, stop")
