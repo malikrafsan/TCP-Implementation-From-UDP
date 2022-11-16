@@ -116,8 +116,8 @@ class Segment:
     def error_correction(self):
         self._payload = self.__error_correcting(self._payload)
 
-    def __error_correcting(self):
-        arrcontent = bytearray(self._payload)
+    def __error_correcting(self, payload):
+        arrcontent = bytearray(payload)
         ln = len(arrcontent)
 
         c1 = arrcontent[:ln//3]
@@ -143,7 +143,7 @@ class Segment:
             else:
                 res.append(arrc1[i])
 
-        return bytes(res)
+        return self.__copy_payload(bytes(res))
 
 
     # -- Marshalling --
