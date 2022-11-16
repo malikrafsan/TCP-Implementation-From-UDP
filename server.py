@@ -189,6 +189,6 @@ if __name__ == '__main__':
     parser.add_argument("[filepath]", type=str)
     args = vars(parser.parse_args())
 
-    main = Server(args["[port]"], args["[filepath]"])
+    main = Server(args["[broadcast port]"], args["[filepath]"])
     main.listen_for_clients()
     main.start_file_transfer()
