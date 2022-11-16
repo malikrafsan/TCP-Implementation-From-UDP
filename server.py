@@ -55,7 +55,7 @@ class Server:
                     if segment.get_flag()["syn"]:
                         self.clientList.append(client_addr)
                         prompt = input("Listen more? (y/n) ")
-                        if input != 'y':
+                        if prompt != 'y':
                             listening = False                
                 else:
                     logger.log("Invalid checksum, ignore this segment")
