@@ -67,18 +67,18 @@ class Server:
         pass
     
     def __send_segments(self, seq_bound_window, seq_bases, client_addr):
-        logger.log(f"[!] Sending segments from {seq_bases} to {seq_bound_window}")
+        logger.log(f"[!] Sending segments from {seq_bases} to {seq_bound_window + seq_bases}")
         
-        stop = False
-        stopIdx = -1
+        # stop = False
+        # stopIdx = -1
         file_handler = BufferFileHandler(self.filePath, "rb", self.buffer_size)
+        
         for i in range(seq_bound_window):
             content = file_handler.get_content(seq_bases + i)
-            # logger.log(f"\n\n[!] Content: {content}")
-            if (content == b''):
-                logger.log(f"[!] EOF with i: {seq_bases + i}")
-                stop = True
-                stopIdx = seq_bases + i
+            # if (content == b''):
+            #     logger.log(f"[!] EOF with i: {seq_bases + i}")
+            #     stop = True
+            #     stopIdx = seq_bases + i
                 
             segment = Segment()
             segment.set_payload(content)
@@ -86,30 +86,36 @@ class Server:
             self.connection.send_data(segment, client_addr)
             logger.log("[!] Segment " + str(seq_bases + i) + " sent")
 
-        return stop, stopIdx
+        # return stop, stopIdx
 
     def file_transfer(self, client_addr : ("ip", "port")):
         # File transfer, server-side, Send file to 1 client
         logger.log("[!] Start file transfer")
         
         seq_bases = 0
-        seq_bound_window = min(self.segmentCount, seq_bases + self.windowSize) - seq_bases
-        
         stop = False
+        seq_bound_window = min(self.segmentCount, seq_bases + self.windowSize) - seq_bases
+
+        
         while (seq_bases < self.segmentCount):
+            # logger.debug(f"segment count: {self.segmentCount}. seq bases: {seq_bases}. wdwsize: {self.windowSize}")
+            # logger.debug(f"SBW: {seq_bound_window}")
             if stop:
                 break
             
-            logger.log(f"[!] Sending segments from {seq_bases} to {seq_bound_window}")
-            stop, stopIdx = self.__send_segments(seq_bound_window, seq_bases, client_addr)
+            logger.log(f"[!] Sending segments from {seq_bases} to {seq_bases + seq_bound_window}")
+            self.__send_segments(seq_bound_window, seq_bases, client_addr)
             
-            seq_bases_max = (seq_bases + self.windowSize) if not stop else stopIdx
+            seq_bases_max = seq_bases + self.windowSize
+            if seq_bound_window < self.windowSize:
+                stop = True
+                seq_bases_max = seq_bases + seq_bound_window
+
             logger.log(f"[!] Waiting for ACK from {seq_bases} to {seq_bound_window} with seq_bases_max = {seq_bases_max}")
             while seq_bases < seq_bases_max:
                 logger.log(f"[!] Waiting for ACK {seq_bases} till seq_bases_max {seq_bases_max}")
                 try:
                     addr, resp, checksum_success = self.connection.listen_single_segment()
-                    # logger.log(f"[!] Received Segment {resp}")
                     logger.log(f"[!] Checksum status: {checksum_success}")
                     logger.log(f"[!] Addr: {addr}")
                     

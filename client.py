@@ -6,7 +6,7 @@ import socket
 import configparser as cp
 from lib.logger import Logger
 
-FILE_PATH = "readme2.md"
+FILE_PATH = "asd.md"
 
 logger = Logger()
 
@@ -118,8 +118,8 @@ class Client:
                 
     
     def __display_info_segment(self, addr, segment, checksum_status):
-        logger.log(f"[!] Received Segment {segment}")
-        logger.log(f"[!] Checksum status: {checksum_status}")
+        # logger.log(f"[!] Received Segment {segment}")
+        # logger.log(f"[!] Checksum status: {checksum_status}")
         logger.log(f"[!] Addr: {addr}")
         
     def __send_ack_stop(self):
