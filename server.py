@@ -10,7 +10,7 @@ from lib.logger import Logger
 
 # TODO: remove later
 FILE_PATH = "generate.txt"
-logger = Logger()
+logger = Logger(Logger.MODE_REGULAR)
 
 class Server:
     def __init__(self):
@@ -80,56 +80,37 @@ class Server:
                 logger.log(f"[!] Client with address {client_addr[0]}:{client_addr[1]} connected")
                 self.file_transfer(client_addr, client_no+1)       
     
-    def __send_segments(self, seq_bound_window, seq_bases, client_addr):
-        logger.log(f"[!] Sending segments from {seq_bases} to {seq_bound_window + seq_bases}")
-        
-        stop = False
-        stopIdx = -1
+    def __send_segments(self, seq_bound_window, seq_bases, client_addr, client_no):
+        logger.log(f"[!] [CLIENT {client_no}] Sending segments from {seq_bases} to {seq_bound_window + seq_bases}")
         file_handler = BufferFileHandler(self.filePath, "rb", self.buffer_size)
         
         for i in range(seq_bound_window):
             content = file_handler.get_content(seq_bases + i)
-            # if (content == b''):
-            #     logger.log(f"[!] EOF with i: {seq_bases + i}")
-            #     stop = True
-            #     stopIdx = seq_bases + i
-                
             segment = Segment()
             segment.set_payload(content)
             segment.set_header({"seq_num": seq_bases+i, "ack_num": 0})
             self.connection.send_data(segment, client_addr)
-            logger.log("[!] Segment " + str(seq_bases + i) + " sent")
-
-        # return stop, stopIdx
+            logger.log(f"[!] [CLIENT {client_no}] Segment " + str(seq_bases + i) + " sent")
 
     def file_transfer(self, client_addr : ("ip", "port"), client_no : int):
-        # File transfer, server-side, Send file to 1 client
         logger.log(f"[!] [CLIENT {client_no}] Start file transfer")
         
         seq_bases = 0
-        stop = False
         seq_bound_window = min(self.segmentCount, seq_bases + self.windowSize) - seq_bases
         
         while (seq_bases < self.segmentCount):
-            # logger.debug(f"segment count: {self.segmentCount}. seq bases: {seq_bases}. wdwsize: {self.windowSize}")
-            # logger.debug(f"SBW: {seq_bound_window}")
-            if stop:
-                break
-            
-            logger.log(f"[!] Sending segments from {seq_bases} to {seq_bases + seq_bound_window}")
-            self.__send_segments(seq_bound_window, seq_bases, client_addr)
+            logger.log(f"[!] [CLIENT {client_no}] Sending segments from {seq_bases} to {seq_bases + seq_bound_window}")
+            self.__send_segments(seq_bound_window, seq_bases, client_addr, client_no)
             
             seq_bases_max = seq_bases + self.windowSize
             if seq_bound_window < self.windowSize:
-                stop = True
                 seq_bases_max = seq_bases + seq_bound_window
 
-            logger.log(f"[!] Waiting for ACK from {seq_bases} to {seq_bound_window} with seq_bases_max = {seq_bases_max}")
+            logger.log(f"[!] [CLIENT {client_no}] Waiting for ACK from {seq_bases} to {seq_bound_window} with seq_bases_max = {seq_bases_max}")
             while seq_bases < seq_bases_max:
                 logger.log(f"[!] [CLIENT {client_no}] Waiting for ACK {seq_bases} till seq_bases_max {seq_bases_max}")
                 try:
                     addr, resp, checksum_success = self.connection.listen_single_segment()
-                    # logger.log(f"[!] Received Segment {resp}")
                     logger.log(f"[!] [CLIENT {client_no}] Checksum status: {checksum_success}")
                     logger.log(f"[!] [CLIENT {client_no}] Addr: {addr}")
                     
@@ -168,9 +149,9 @@ class Server:
         try:
             addr, resp, checksum_success = self.connection.listen_single_segment()
             if addr == client_addr and checksum_success and resp.get_flag()["ack"]:
-                logger.log(f"[!] Client [{client_addr[0]}:{client_addr[1]}] has closed connection")
+                logger.log(f"[!] [CLIENT {client_no}] [{client_addr[0]}:{client_addr[1]}] has closed connection")
         except Exception as e:
-            logger.log(f"[!] [{client_addr[0]}:{client_addr[1]}] ACK tearing down timeout, force closing connection\n")
+            logger.log(f"[!] [CLIENT {client_no}] [{client_addr[0]}:{client_addr[1]}] ACK tearing down timeout, force closing connection\n")
 
     def __send_fin_flag(self, client_addr):
         data = Segment()
@@ -183,11 +164,9 @@ class Server:
         syn_ack_segment = Segment()
         syn_ack_segment.set_flag([segment.SYN_FLAG, segment.ACK_FLAG])
         self.connection.send_data(syn_ack_segment, client_addr)
-        logger.log(f"[!] [CLIENT {client_no}] SYN-ACK sent, waiting for ACK")
-        addr, ack_segment, checksum_status = self.connection.listen_single_segment()
-        # TODO: check if addr is the same, if not listen again
-        # cover case where multiple clients
         try:
+            logger.log(f"[!] [CLIENT {client_no}] SYN-ACK sent, waiting for ACK")
+            addr, ack_segment, checksum_status = self.connection.listen_single_segment()
             if addr == client_addr and checksum_status:
                 if ack_segment.get_flag()["ack"]:
                     logger.log(f"[!] [CLIENT {client_no}] ACK received, handshake completed")
@@ -200,6 +179,7 @@ class Server:
                 return False
         except socket.timeout as e:
             logger.log(f"[!] [CLIENT {client_no}] timeout, handshake failed {e}")
+            return False
 
 if __name__ == '__main__':
     main = Server()

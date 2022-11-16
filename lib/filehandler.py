@@ -1,5 +1,5 @@
 class BufferFileHandler:  
-  def __init__(self, path: str, flag:str, buffer_size: int):
+  def __init__(self, path: str, flag:str, buffer_size: int=-1):
     self.path = path
     self.file = open(self.path, flag)
     self.buffer_size = buffer_size

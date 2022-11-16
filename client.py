@@ -8,18 +8,11 @@ from lib.logger import Logger
 
 FILE_PATH = "asd.md"
 
-logger = Logger()
+logger = Logger(Logger.MODE_REGULAR)
 
 class Client:
     def __init__(self):
         # Init client
-
-        # self.ip = input("Enter IP: ")
-        # self.port = int(input("Enter port: "))
-        # self.filePath = input("Enter file destination path: ")
-        # self.server_addr = (input("Enter server IP: "), int(input("Enter server port: ")))
-
-        # ===================== DEBUG =====================
         self.client_config = cp.ConfigParser()
         self.client_config.read("inc/client-config.ini")
         
@@ -34,7 +27,6 @@ class Client:
         self.handshake_timeout = int(self.client_config["CONN"]["HANDSHAKE_TIMEOUT"])
         self.regular_timeout = int(
             self.client_config["CONN"]["REGULAR_TIMEOUT"])
-        # ===================== DEBUG =====================
 
         self.connection = lib.connection.Connection(self.ip, self.port)
         self.windowSize = int(self.client_config["CONN"]["WINDOW_SIZE"])
@@ -53,6 +45,7 @@ class Client:
 
         logger.log("[!] SYN sent, waiting for SYN-ACK")
         try:
+            # TODO: check if address is valid or not
             addr, syn_ack_segment, checksum_status = self.connection.listen_single_segment()
             if checksum_status:
                 if syn_ack_segment.get_flag()["syn"] and syn_ack_segment.get_flag()["ack"]:
@@ -77,7 +70,7 @@ class Client:
         
         stop = False
         cur_num = 0
-        file_handler = BufferFileHandler(self.filePath, "wb", -1)
+        file_handler = BufferFileHandler(self.filePath, "wb")
         while not stop:
             try:
                 addr, segment, checksum_status = self.connection.listen_single_segment()
@@ -115,7 +108,6 @@ class Client:
                 else:
                     logger.log(f"[!] timeout on first segment, exit")
                     exit(1)
-                
     
     def __display_info_segment(self, addr, segment, checksum_status):
         # logger.log(f"[!] Received Segment {segment}")
