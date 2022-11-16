@@ -9,7 +9,6 @@ import socket
 
 # TODO: remove later
 FILE_PATH = "generate.txt"
-BUFFER_SIZE = 32756
 
 class Server:
     def __init__(self):
@@ -35,7 +34,8 @@ class Server:
         fileReader.close()
 
         self.windowSize = int(self.config["CONN"]["WINDOW_SIZE"])
-        self.segmentCount = math.ceil(self.fileSize / BUFFER_SIZE)
+        self.buffer_size = int(self.config["CONN"]["BUFFER_SIZE"]) - 12
+        self.segmentCount = math.ceil(self.fileSize / self.buffer_size)
         self.ackTimeout = int(self.config["CONN"]["TIMEOUT"])
         self.connection.set_timeout(self.ackTimeout)
         print("[!] Server initialized at " + self.ip + ":" + str(self.port))
@@ -69,7 +69,7 @@ class Server:
         
         stop = False
         stopIdx = -1
-        file_handler = BufferFileHandler(self.filePath, "rb")
+        file_handler = BufferFileHandler(self.filePath, "rb", self.buffer_size)
         for i in range(seq_bound_window):
             content = file_handler.get_content(seq_bases + i)
             # print(f"\n\n[!] Content: {content}")

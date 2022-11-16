@@ -74,7 +74,7 @@ class Client:
         
         stop = False
         cur_num = 0
-        file_handler = BufferFileHandler(self.filePath, "wb")
+        file_handler = BufferFileHandler(self.filePath, "wb", -1)
         while not stop:
             try:
                 addr, segment, checksum_status = self.connection.listen_single_segment()
@@ -107,6 +107,9 @@ class Client:
                 if (cur_num > 0):
                     print(f"[!] Resend ACK for seq {cur_num-1}")
                     self.__send_ack_seq(cur_num - 1)
+                else:
+                    print(f"[!] timeout on first segment, exit")
+                    exit(1)
                 
     
     def __display_info_segment(self, addr, segment, checksum_status):
