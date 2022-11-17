@@ -96,7 +96,12 @@ class Server:
             logger.debug(f"SEQ WINDOW SIZE {self.windowSize}")
             logger.debug(f"SEQ BOUND WINDOW {seq_bound_window}")
             logger.log(f"[!] [CLIENT {client_no}] Sending segments from {seq_bases} to {seq_bases + seq_bound_window}")
-            self.__send_segments(seq_bound_window, seq_bases, client_addr, client_no)
+
+            try:
+                self.__send_segments(seq_bound_window, seq_bases, client_addr, client_no)
+            except socket.timeout:
+                logger.critical("[!!!] TIMEOUT ON SEND SEGMENT")
+                pass
             
             seq_bases_max = seq_bases + self.windowSize
             if seq_bound_window < self.windowSize:
