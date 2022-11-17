@@ -88,7 +88,7 @@ class Client:
         logger.log("[!] Listen file transfer")
         
         stop = False
-        cur_num = 0
+        cur_num = 1
         file_handler = BufferFileHandler(self.filePath, "wb")
 
         if self.metadata_enabled:

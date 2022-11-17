@@ -10,7 +10,7 @@ from lib.logger import Logger
 import argparse
 import pathlib
 
-logger = Logger(Logger.MODE_REGULAR)
+logger = Logger(Logger.MODE_VERBOSE)
 
 class Server:
     def __init__(self, port: int, filepath: str, send_metadata: bool = False):
@@ -27,6 +27,7 @@ class Server:
         self.windowSize = int(self.config["CONN"]["WINDOW_SIZE"])
         self.buffer_size = (int(self.config["CONN"]["BUFFER_SIZE"]) - 12) // 3
         self.segmentCount = math.ceil(self.fileSize / self.buffer_size)
+        print("SEGMENT COUNT", self.segmentCount)
         self.ackTimeout = int(self.config["CONN"]["TIMEOUT"])
         self.connection.set_timeout(self.ackTimeout)
         logger.log("[!] Server initialized at " + self.ip + ":" + str(self.port))
@@ -77,7 +78,7 @@ class Server:
         file_handler = BufferFileHandler(self.filePath, "rb", self.buffer_size)
         
         for i in range(seq_bound_window):
-            content = file_handler.get_content(seq_bases + i)
+            content = file_handler.get_content(seq_bases + i - 1)
             segment = Segment()
             segment.set_payload(content)
             segment.set_header({"seq_num": seq_bases+i, "ack_num": 0})
@@ -87,10 +88,14 @@ class Server:
     def file_transfer(self, client_addr : ("ip", "port"), client_no : int):
         logger.log(f"[!] [CLIENT {client_no}] Start file transfer")
         
-        seq_bases = 0
-        seq_bound_window = min(self.segmentCount, seq_bases + self.windowSize) - seq_bases
+        seq_bases = 1
+        seq_bound_window = min(self.segmentCount+1, seq_bases + self.windowSize) - seq_bases
         
-        while (seq_bases < self.segmentCount):
+        while (seq_bases < (self.segmentCount+1)):
+            logger.debug(f"SEG COUNT {self.segmentCount}")
+            logger.debug(f"SEG BASES {seq_bases}")
+            logger.debug(f"SEQ WINDOW SIZE {self.windowSize}")
+            logger.debug(f"SEQ BOUND WINDOW {seq_bound_window}")
             logger.log(f"[!] [CLIENT {client_no}] Sending segments from {seq_bases} to {seq_bases + seq_bound_window}")
             self.__send_segments(seq_bound_window, seq_bases, client_addr, client_no)
             
@@ -116,12 +121,12 @@ class Server:
                         ack_num = resp.get_header()["ack_num"]
                         if (ack_num == seq_bases):
                             seq_bases += 1
-                            seq_bound_window = min(self.segmentCount, seq_bases + self.windowSize) - seq_bases
+                            seq_bound_window = min(self.segmentCount+1, seq_bases + self.windowSize) - seq_bases
                             logger.log(f"[!] [CLIENT {client_no}] ACK {ack_num} received, move window to {seq_bases}")
                         elif ack_num > seq_bases:
                             logger.log(f"[!] [CLIENT {client_no}] ACK {ack_num} received, move window to {ack_num + 1}")
                             seq_bases = ack_num + 1
-                            seq_bound_window = min(self.segmentCount, seq_bases + self.windowSize) - seq_bases
+                            seq_bound_window = min(self.segmentCount+1, seq_bases + self.windowSize) - seq_bases
                         else:
                             logger.log(f"[!] [CLIENT {client_no}] ACK {ack_num} below seq_bases {seq_bases} received, ignore")
                     
