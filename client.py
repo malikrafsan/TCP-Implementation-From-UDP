@@ -47,8 +47,13 @@ class Client:
 
         logger.log("[!] SYN sent, waiting for SYN-ACK")
         try:
-            # TODO: check if address is valid or not
-            addr, syn_ack_segment, checksum_status = self.connection.listen_single_segment()
+            listening = True
+            while listening:
+                addr, syn_ack_segment, checksum_status = self.connection.listen_single_segment()
+                if (addr != self.server_addr):
+                    logger.log(f"[!] Packet received from {addr[0]}:{addr[1]}. Ignoring..")
+                else:
+                    listening = False  
             if checksum_status:
                 if syn_ack_segment.get_flag()["syn"] and syn_ack_segment.get_flag()["ack"]:
                     logger.log("[!] SYN-ACK received")
