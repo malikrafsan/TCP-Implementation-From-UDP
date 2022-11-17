@@ -31,6 +31,7 @@ class Client:
 
         self.connection = lib.connection.Connection(self.ip, self.port)
         self.windowSize = int(self.client_config["CONN"]["WINDOW_SIZE"])
+        self.metadata_enabled = False
         logger.log("[!] Client initialized at " + self.ip + ":" + str(self.port))
         
 
@@ -51,6 +52,15 @@ class Client:
             if checksum_status:
                 if syn_ack_segment.get_flag()["syn"] and syn_ack_segment.get_flag()["ack"]:
                     logger.log("[!] SYN-ACK received")
+
+                    logger.log("[!] Checking enable metadata flag...")
+                    payload = syn_ack_segment.get_payload()
+                    if payload == (b"\xff" * 10):
+                        logger.log("[!] File metadata enabled")
+                        self.metadata_enabled = True
+                    else:
+                        logger.log("[!] File metadata disabled")
+
                     ack_segment = Segment()
                     ack_segment.set_flag([segment.ACK_FLAG])
                     self.connection.send_data(ack_segment, self.server_addr)
@@ -73,10 +83,17 @@ class Client:
         stop = False
         cur_num = 0
         file_handler = BufferFileHandler(self.filePath, "wb")
+
+        if self.metadata_enabled:
+            try:
+                self.__receive_metadata()
+            except socket.timeout:
+                logger.log(f"[!] Metadata connection timeout")
+
         while not stop:
             try:
                 addr, segment, checksum_status = self.connection.listen_single_segment()
-                self.__display_info_segment(addr, segment, checksum_status)
+                # self.__display_info_segment(addr, segment, checksum_status)
                 
                 if addr != self.server_addr:
                     logger.log("[!] Segment not from server, ignore")
@@ -111,10 +128,30 @@ class Client:
                 else:
                     logger.log(f"[!] timeout on first segment, exit")
                     exit(1)
+
+    def __receive_metadata(self):
+        addr, segment, checksum_status = self.connection.listen_single_segment()
+        # self.__display_info_segment(addr, segment, checksum_status)
+        
+        if addr != self.server_addr:
+            logger.log("[!] Metadata segment not from server, ignore")
+        if not checksum_status:
+            logger.log("[!] Metadata checksum failed, ignore")
+            logger.critical("[!!!] CHECKSUM FAILED")
+        else:
+            payload = segment.get_payload()
+            filename, ext = payload.split(b"\x00")
+            filename = filename.decode("ascii")
+            ext = ext.decode("ascii")
+
+            logger.log("[!] ---- START OF METADATA ----")
+            logger.log(f"[!] Filename : {filename}")
+            logger.log(f"[!] Extension: {ext}")
+            logger.log("[!] ----- END OF METADATA -----")
     
     def __display_info_segment(self, addr, segment, checksum_status):
-        # logger.log(f"[!] Received Segment {segment}")
-        # logger.log(f"[!] Checksum status: {checksum_status}")
+        logger.log(f"[!] Received Segment {segment}")
+        logger.log(f"[!] Checksum status: {checksum_status}")
         logger.log(f"[!] Addr: {addr}")
         
     def __send_ack_stop(self):

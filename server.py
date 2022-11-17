@@ -8,13 +8,14 @@ import configparser as cp
 import socket
 from lib.logger import Logger
 import argparse
+import pathlib
 
 # TODO: remove later
 FILE_PATH = "generate.txt"
 logger = Logger(Logger.MODE_REGULAR)
 
 class Server:
-    def __init__(self, port: int, filepath: str):
+    def __init__(self, port: int, filepath: str, send_metadata: bool = False):
         # Init server
         # self.ip = input("Enter server IP: ")
         # self.port = int(input("Enter server port: "))
@@ -36,6 +37,7 @@ class Server:
         self.fileSize = fileReader.tell()
         fileReader.close()
 
+        self.send_metadata = send_metadata
         self.windowSize = int(self.config["CONN"]["WINDOW_SIZE"])
         self.buffer_size = (int(self.config["CONN"]["BUFFER_SIZE"]) - 12) // 3
         self.segmentCount = math.ceil(self.fileSize / self.buffer_size)
@@ -80,6 +82,9 @@ class Server:
         for client_no, client_addr in enumerate(self.clientList):
             if self.three_way_handshake(client_addr, client_no+1):
                 logger.log(f"[!] Client with address {client_addr[0]}:{client_addr[1]} connected")
+                
+                if self.send_metadata:
+                    self.__send_metadata(client_addr)
                 self.file_transfer(client_addr, client_no+1)       
     
     def __send_segments(self, seq_bound_window, seq_bases, client_addr, client_no):
@@ -165,6 +170,11 @@ class Server:
         logger.log(f"[!] [CLIENT {client_no}] Start three way handshake to client {client_addr[0]}:{client_addr[1]}")
         syn_ack_segment = Segment()
         syn_ack_segment.set_flag([segment.SYN_FLAG, segment.ACK_FLAG])
+
+        if self.send_metadata:
+            enable_metadata_flag = b"\xff" * 10
+            syn_ack_segment.set_payload(enable_metadata_flag)
+
         self.connection.send_data(syn_ack_segment, client_addr)
         try:
             logger.log(f"[!] [CLIENT {client_no}] SYN-ACK sent, waiting for ACK")
@@ -183,12 +193,25 @@ class Server:
             logger.log(f"[!] [CLIENT {client_no}] timeout, handshake failed {e}")
             return False
 
+    def __send_metadata(self, client_addr: ("ip", "port")):
+        path = pathlib.Path(self.filePath)
+        filename = path.stem
+        ext = path.suffix
+        
+        payload = bytes(filename, "ascii") + b"\x00" + bytes(ext, "ascii")
+        data = Segment()
+        data.set_payload(payload)
+
+        self.connection.send_data(data, client_addr)
+        
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("[broadcast port]", type=int)
     parser.add_argument("[filepath]", type=str)
+    parser.add_argument("-m", default=False, action="store_true", help="Flag to send metadata")
     args = vars(parser.parse_args())
 
-    main = Server(args["[broadcast port]"], args["[filepath]"])
+    main = Server(args["[broadcast port]"], args["[filepath]"], args["m"])
     main.listen_for_clients()
     main.start_file_transfer()
