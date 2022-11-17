@@ -92,10 +92,7 @@ class Client:
         file_handler = BufferFileHandler(self.filePath, "wb")
 
         if self.metadata_enabled:
-            try:
-                self.__receive_metadata()
-            except socket.timeout:
-                logger.log(f"[!] Metadata connection timeout")
+            self.__receive_metadata()
 
         while not stop:
             try:
@@ -137,24 +134,33 @@ class Client:
                     exit(1)
 
     def __receive_metadata(self):
-        addr, segment, checksum_status = self.connection.listen_single_segment()
-        # self.__display_info_segment(addr, segment, checksum_status)
-        
-        if addr != self.server_addr:
-            logger.log("[!] Metadata segment not from server, ignore")
-        if not checksum_status:
-            logger.log("[!] Metadata checksum failed, ignore")
-            logger.critical("[!!!] CHECKSUM FAILED")
-        else:
-            payload = segment.get_payload()
-            filename, ext = payload.split(b"\x00")
-            filename = filename.decode("ascii")
-            ext = ext.decode("ascii")
+        while True:
+            try:
+                addr, segment, checksum_status = self.connection.listen_single_segment()
+                if addr != self.server_addr:
+                    logger.log("[!] Metadata segment not from server, ignore")
+                    continue
+                if not checksum_status:
+                    logger.log("[!] Metadata checksum failed, ignore")
+                    logger.critical("[!!!] CHECKSUM FAILED")
+                    continue
+                if not segment.get_flag()["met"]:
+                    logger.log("[!] Segment is not metadata, ignore")
+                    continue
 
-            logger.log("[!] ---- START OF METADATA ----")
-            logger.log(f"[!] Filename : {filename}")
-            logger.log(f"[!] Extension: {ext}")
-            logger.log("[!] ----- END OF METADATA -----")
+                payload = segment.get_payload()
+                filename, ext = payload.split(b"\x00")
+                filename = filename.decode("ascii")
+                ext = ext.decode("ascii")
+
+                logger.log("[!] ---- START OF METADATA ----")
+                logger.log(f"[!] Filename : {filename}")
+                logger.log(f"[!] Extension: {ext}")
+                logger.log("[!] ----- END OF METADATA -----")
+                break
+            except socket.timeout:
+                logger.log(f"[!] Metadata connection timeout")
+                break
     
     def __display_info_segment(self, addr, segment, checksum_status):
         logger.log(f"[!] Received Segment {segment}")

@@ -185,6 +185,7 @@ class Server:
         
         payload = bytes(filename, "ascii") + b"\x00" + bytes(ext, "ascii")
         data = Segment()
+        data.set_flag([segment.MET_FLAG])
         data.set_payload(payload)
 
         self.connection.send_data(data, client_addr)
