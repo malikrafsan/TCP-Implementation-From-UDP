@@ -17,7 +17,7 @@ class Server:
         self.config = cp.ConfigParser()
         self.config.read("inc/server-config.ini")
         
-        self.ip = self.config["CONN"]["IP"]
+        self.ip = lib.connection.Connection.select_ip_address()
         self.port = port
         self.filePath = filepath
         self.fileSize = BufferFileHandler(self.filePath, "rb").file_size()
@@ -192,11 +192,11 @@ class Server:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("[broadcast port]", type=int)
-    parser.add_argument("[filepath]", type=str)
+    parser.add_argument("<broadcast_port>", type=int)
+    parser.add_argument("<filepath>", type=str)
     parser.add_argument("-m", default=False, action="store_true", help="Flag to send metadata")
     args = vars(parser.parse_args())
 
-    main = Server(args["[broadcast port]"], args["[filepath]"], args["m"])
+    main = Server(args["<broadcast_port>"], args["<filepath>"], args["m"])
     main.listen_for_clients()
     main.start_file_transfer()

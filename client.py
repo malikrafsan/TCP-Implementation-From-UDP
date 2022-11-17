@@ -11,7 +11,7 @@ import time
 logger = Logger(Logger.MODE_REGULAR)
 
 class Client:
-    def __init__(self, client_port: int, broadcast_port: int, filepath: str):
+    def __init__(self, client_port: int, server_ip_address: int, broadcast_port: int, filepath: str):
         # Init client
         self.client_config = cp.ConfigParser()
         self.client_config.read("inc/client-config.ini")
@@ -23,7 +23,7 @@ class Client:
         self.port = client_port
         self.filePath = filepath
         self.server_addr = (
-            self.server_config["CONN"]["IP"], broadcast_port)
+            server_ip_address, broadcast_port)
         self.handshake_timeout = int(self.client_config["CONN"]["HANDSHAKE_TIMEOUT"])
         self.regular_timeout = int(
             self.client_config["CONN"]["REGULAR_TIMEOUT"])
@@ -176,11 +176,12 @@ class Client:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("[client port]", type=int)
-    parser.add_argument("[broadcast port]", type=int)
-    parser.add_argument("[filepath]", type=str)
+    parser.add_argument("<client_port>", type=int)
+    parser.add_argument("<server_ip_address>", type=str)
+    parser.add_argument("<broadcast_port>", type=int)
+    parser.add_argument("<filepath>", type=str)
     args = vars(parser.parse_args())
 
-    main = Client(args["[client port]"], args["[broadcast port]"], args["[filepath]"])
+    main = Client(args["<client_port>"], args["<server_ip_address>"], args["<broadcast_port>"], args["<filepath>"])
     main.three_way_handshake()
     main.listen_file_transfer()
