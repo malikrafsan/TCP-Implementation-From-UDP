@@ -5,6 +5,7 @@ import copy
 SYN_FLAG = 0b00010
 ACK_FLAG = 0b10000
 FIN_FLAG = 0b00001
+MET_FLAG = 0b01000
 
 
 class SegmentFlag:
@@ -14,18 +15,20 @@ class SegmentFlag:
             self._flags = {
                 "syn": flag & SYN_FLAG,
                 "ack": flag & ACK_FLAG,
-                "fin": flag & FIN_FLAG
+                "fin": flag & FIN_FLAG,
+                "met": flag & MET_FLAG
             }
         else:
             self._flags = {
                 "syn": 0,
                 "ack": 0,
-                "fin": 0
+                "fin": 0,
+                "met": 0
             }
 
     def get_flag_int(self) -> int:
         # Convert this object to flag in byte form
-        flag = self._flags["syn"] | self._flags["ack"] | self._flags["fin"]
+        flag = self._flags["syn"] | self._flags["ack"] | self._flags["fin"] | self._flags["met"]
         return flag
 
     def get_flag(self) -> dict:
