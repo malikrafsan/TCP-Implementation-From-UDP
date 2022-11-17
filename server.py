@@ -10,7 +10,7 @@ from lib.logger import Logger
 import argparse
 import pathlib
 
-logger = Logger(Logger.MODE_VERBOSE)
+logger = Logger(Logger.MODE_REGULAR)
 
 class Server:
     def __init__(self, port: int, filepath: str, send_metadata: bool = False):
@@ -27,7 +27,6 @@ class Server:
         self.windowSize = int(self.config["CONN"]["WINDOW_SIZE"])
         self.buffer_size = (int(self.config["CONN"]["BUFFER_SIZE"]) - 12) // 3
         self.segmentCount = math.ceil(self.fileSize / self.buffer_size)
-        print("SEGMENT COUNT", self.segmentCount)
         self.ackTimeout = int(self.config["CONN"]["TIMEOUT"])
         self.connection.set_timeout(self.ackTimeout)
         logger.log("[!] Server initialized at " + self.ip + ":" + str(self.port))

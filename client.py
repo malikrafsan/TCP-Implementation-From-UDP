@@ -97,8 +97,7 @@ class Client:
         while not stop:
             try:
                 addr, segment, checksum_status = self.connection.listen_single_segment()
-                # self.__display_info_segment(addr, segment, checksum_status)
-                
+
                 if addr != self.server_addr:
                     logger.log("[!] Segment not from server, ignore")
                     continue
@@ -161,11 +160,6 @@ class Client:
             except socket.timeout:
                 logger.log(f"[!] Metadata connection timeout")
                 break
-    
-    def __display_info_segment(self, addr, segment, checksum_status):
-        logger.log(f"[!] Received Segment {segment}")
-        logger.log(f"[!] Checksum status: {checksum_status}")
-        logger.log(f"[!] Addr: {addr}")
         
     def __send_ack_stop(self):
         data = Segment()
