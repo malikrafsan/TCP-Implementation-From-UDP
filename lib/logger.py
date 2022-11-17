@@ -15,11 +15,13 @@ class Logger:
     def __init__(self, mode=MODE_VERBOSE):
         self.mode = mode
 
-    def log(self, msg, level=LEVEL_INFO):
+    def log(self, msg="", level=LEVEL_INFO):
+        if (msg == ""):
+            print()
+
         self.output(msg, level)
 
     def output(self, msg, level):
-        # print(msg)
         if self.mode == self.MODE_VERBOSE:
             stack = inspect.stack()[2]
             msg = f"[{stack.filename}:{stack.lineno} on {stack.function}] | " + msg

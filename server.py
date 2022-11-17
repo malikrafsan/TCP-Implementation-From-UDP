@@ -10,33 +10,19 @@ from lib.logger import Logger
 import argparse
 import pathlib
 
-# TODO: remove later
-FILE_PATH = "generate.txt"
 logger = Logger(Logger.MODE_REGULAR)
 
 class Server:
     def __init__(self, port: int, filepath: str, send_metadata: bool = False):
-        # Init server
-        # self.ip = input("Enter server IP: ")
-        # self.port = int(input("Enter server port: "))
-        # self.filePath = input("Enter file source path: ")
-
-        # ===================== DEBUG =====================
         self.config = cp.ConfigParser()
         self.config.read("inc/server-config.ini")
         
         self.ip = self.config["CONN"]["IP"]
         self.port = port
         self.filePath = filepath
-        # ===================== DEBUG =====================
+        self.fileSize = BufferFileHandler(self.filePath, "rb").file_size()
 
         self.connection = lib.connection.Connection(self.ip, self.port)
-
-        fileReader = open(self.filePath, "rb")
-        self.file = fileReader.read()
-        self.fileSize = fileReader.tell()
-        fileReader.close()
-
         self.send_metadata = send_metadata
         self.windowSize = int(self.config["CONN"]["WINDOW_SIZE"])
         self.buffer_size = (int(self.config["CONN"]["BUFFER_SIZE"]) - 12) // 3
@@ -61,24 +47,23 @@ class Server:
                         if prompt != 'y':
                             listening = False                
                 else:
-                    logger.critical("[!!!] CHECKSUM FAILED")
-                    logger.log("Invalid checksum, ignore this segment")
+                    logger.critical("[!!!] CHECKSUM FAILED, DISCARDING PACKET")
             except socket.timeout as e:
                 logger.log(f"[!] No client found {e}")
                 pass
             
 
     def __print_client_list(self):
-        print()
-        print("Client list:")
+        logger.log()
+        logger.log("Client list:")
         for (i, client) in enumerate(self.clientList):
-            print(f"{i+1}. {client[0]}:{client[1]}")
-        print()
+            logger.log(f"{i+1}. {client[0]}:{client[1]}")
+        logger.log()
 
     def start_file_transfer(self):
         # Handshake & file transfer for all client
         self.__print_client_list()
-        print("[!] Commencing file transfer...")
+        logger.log("[!] Commencing file transfer...")
         for client_no, client_addr in enumerate(self.clientList):
             if self.three_way_handshake(client_addr, client_no+1):
                 logger.log(f"[!] Client with address {client_addr[0]}:{client_addr[1]} connected")

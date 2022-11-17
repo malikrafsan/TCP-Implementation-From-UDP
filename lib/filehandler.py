@@ -3,6 +3,10 @@ class BufferFileHandler:
     self.path = path
     self.file = open(self.path, flag)
     self.buffer_size = buffer_size
+    
+  def file_size(self):
+    self.file.read()
+    return self.file.tell()
   
   def get_content(self, i):
     self.file.seek(i * self.buffer_size)

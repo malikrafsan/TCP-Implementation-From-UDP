@@ -8,8 +8,6 @@ from lib.logger import Logger
 import argparse
 import time
 
-FILE_PATH = "asd.md"
-
 logger = Logger(Logger.MODE_REGULAR)
 
 class Client:
