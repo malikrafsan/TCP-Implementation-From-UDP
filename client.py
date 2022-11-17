@@ -6,6 +6,7 @@ import socket
 import configparser as cp
 from lib.logger import Logger
 import argparse
+import time
 
 FILE_PATH = "asd.md"
 
@@ -48,12 +49,15 @@ class Client:
         logger.log("[!] SYN sent, waiting for SYN-ACK")
         try:
             listening = True
+            start_time = time.time()
             while listening:
                 addr, syn_ack_segment, checksum_status = self.connection.listen_single_segment()
                 if (addr != self.server_addr):
                     logger.log(f"[!] Packet received from {addr[0]}:{addr[1]}. Ignoring..")
                 else:
                     listening = False  
+                if (time.time() - start_time > self.handshake_timeout):
+                    raise socket.timeout("timed out")
             if checksum_status:
                 if syn_ack_segment.get_flag()["syn"] and syn_ack_segment.get_flag()["ack"]:
                     logger.log("[!] SYN-ACK received")
