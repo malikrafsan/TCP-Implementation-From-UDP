@@ -181,7 +181,8 @@ class Server:
                     logger.log(f"[!] [CLIENT {client_no}] ACK not received, handshake failed")
                     return False
             else:
-                logger.log(f"[!] [CLIENT {client_no}] Invalid checksum, handshake failed")
+                err = "Receive segment from different address" if addr != client_addr else "Invalid checksum"
+                logger.log(f"[!] [CLIENT {client_no}] {err}, handshake failed")
                 return False
         except socket.timeout as e:
             logger.log(f"[!] [CLIENT {client_no}] timeout, handshake failed {e}")
