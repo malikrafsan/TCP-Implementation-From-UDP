@@ -85,6 +85,7 @@ class Client:
     def listen_file_transfer(self):
         # File transfer, client-side
         self.connection.set_timeout(self.regular_timeout)
+        last_segment_time = time.time()
         logger.log("[!] Listen file transfer")
         
         stop = False
@@ -93,11 +94,12 @@ class Client:
 
         if self.metadata_enabled:
             self.__receive_metadata()
+            last_segment_time = time.time()
 
         while not stop:
             try:
                 addr, segment, checksum_status = self.connection.listen_single_segment()
-
+                last_segment_time = time.time()
                 if addr != self.server_addr:
                     logger.log("[!] Segment not from server, ignore")
                     continue
@@ -123,7 +125,11 @@ class Client:
                 self.__send_ack_seq(cur_num)
                 cur_num += 1
              
-            except socket.timeout as e:
+            except socket.timeout:
+                MAX_NOT_RECEIVING_TIMEOUT = 10
+                if (time.time() - last_segment_time > MAX_NOT_RECEIVING_TIMEOUT):
+                    logger.warning(f"[!!!] Too many timeout, stop")
+                    exit(1)
                 logger.log(f"[!] Connection timeout")
                 if (cur_num > 0):
                     logger.log(f"[!] Resend ACK for seq {cur_num-1}")

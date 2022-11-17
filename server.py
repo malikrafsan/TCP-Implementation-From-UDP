@@ -9,6 +9,7 @@ import socket
 from lib.logger import Logger
 import argparse
 import pathlib
+import time
 
 logger = Logger(Logger.MODE_REGULAR)
 
@@ -86,7 +87,7 @@ class Server:
 
     def file_transfer(self, client_addr : ("ip", "port"), client_no : int):
         logger.log(f"[!] [CLIENT {client_no}] Start file transfer")
-        
+        last_ack_time = time.time()
         seq_bases = 1
         seq_bound_window = min(self.segmentCount+1, seq_bases + self.windowSize) - seq_bases
         
@@ -107,6 +108,7 @@ class Server:
                 logger.log(f"[!] [CLIENT {client_no}] Waiting for ACK {seq_bases} till seq_bases_max {seq_bases_max}")
                 try:
                     addr, resp, checksum_success = self.connection.listen_single_segment()
+                    last_ack_time = time.time()
                     logger.log(f"[!] [CLIENT {client_no}] Checksum status: {checksum_success}")
                     logger.log(f"[!] [CLIENT {client_no}] Addr: {addr}")
                     
@@ -130,6 +132,10 @@ class Server:
                             logger.log(f"[!] [CLIENT {client_no}] ACK {ack_num} below seq_bases {seq_bases} received, ignore")
                     
                 except socket.timeout:
+                    MAX_NOT_RECEIVING_TIMEOUT = 10
+                    if time.time() - last_ack_time > MAX_NOT_RECEIVING_TIMEOUT:
+                        logger.warning(f"[!!!] [CLIENT {client_no}] No ACK received for {MAX_NOT_RECEIVING_TIMEOUT} seconds, skip to next client")
+                        return
                     logger.log(f"[!] [CLIENT {client_no}] Timeout, resend segments from {seq_bases} to {seq_bound_window}")
                     break
                 
