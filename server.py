@@ -41,14 +41,17 @@ class Server:
             try:
                 client_addr, segment, checksum_status = self.connection.listen_single_segment()
                 logger.log("[!] Received request from " + client_addr[0] + ":" + str(client_addr[1]))
-                if checksum_status:
-                    if segment.get_flag()["syn"]:
-                        self.clientList.append(client_addr)
-                        prompt = input("[?] Listen more? (y/n) ")
-                        if prompt != 'y':
-                            listening = False                
-                else:
+                if not checksum_status:
                     logger.critical("[!!!] CHECKSUM FAILED, DISCARDING PACKET")
+                    continue
+                
+                if not segment.get_flag()["syn"]:
+                    continue
+                
+                self.clientList.append(client_addr)
+                prompt = input("[?] Listen more? (y/n) ")
+                if prompt != 'y':
+                    listening = False
             except socket.timeout as e:
                 logger.log(f"[!] No client found {e}")
                 pass
@@ -66,12 +69,14 @@ class Server:
         self.__print_client_list()
         logger.log("[!] Commencing file transfer...")
         for client_no, client_addr in enumerate(self.clientList):
-            if self.three_way_handshake(client_addr, client_no+1):
-                logger.log(f"[!] Client with address {client_addr[0]}:{client_addr[1]} connected")
-                
-                if self.send_metadata:
-                    self.__send_metadata(client_addr)
-                self.file_transfer(client_addr, client_no+1)       
+            if not self.three_way_handshake(client_addr, client_no+1):
+                continue
+            
+            logger.log(f"[!] Client with address {client_addr[0]}:{client_addr[1]} connected")
+            
+            if self.send_metadata:
+                self.__send_metadata(client_addr)
+            self.file_transfer(client_addr, client_no+1)       
     
     def __send_segments(self, seq_bound_window, seq_bases, client_addr, client_no):
         logger.log(f"[!] [CLIENT {client_no}] Sending segments from {seq_bases} to {seq_bound_window + seq_bases}")
@@ -85,7 +90,7 @@ class Server:
             self.connection.send_data(segment, client_addr)
             logger.log(f"[!] [CLIENT {client_no}] Segment " + str(seq_bases + i) + " sent")
 
-    def file_transfer(self, client_addr : ("ip", "port"), client_no : int):
+    def file_transfer(self, client_addr : tuple["ip", "port"], client_no : int):
         logger.log(f"[!] [CLIENT {client_no}] Start file transfer")
         last_ack_time = time.time()
         seq_bases = 1
@@ -123,18 +128,20 @@ class Server:
                     if not checksum_success:
                         logger.critical(f"[!!!] [CLIENT {client_no}] Invalid checksum, ignore")
                         continue
-                    if (resp.get_flag()["ack"]):
-                        ack_num = resp.get_header()["ack_num"]
-                        if (ack_num == seq_bases):
-                            seq_bases += 1
-                            seq_bound_window = min(self.segmentCount+1, seq_bases + self.windowSize) - seq_bases
-                            logger.log(f"[!] [CLIENT {client_no}] ACK {ack_num} received, move window to {seq_bases}")
-                        elif ack_num > seq_bases:
-                            logger.log(f"[!] [CLIENT {client_no}] ACK {ack_num} received, move window to {ack_num + 1}")
-                            seq_bases = ack_num + 1
-                            seq_bound_window = min(self.segmentCount+1, seq_bases + self.windowSize) - seq_bases
-                        else:
-                            logger.log(f"[!] [CLIENT {client_no}] ACK {ack_num} below seq_bases {seq_bases} received, ignore")
+                    if not resp.get_flag()["ack"]:
+                        continue
+                    
+                    ack_num = resp.get_header()["ack_num"]
+                    if (ack_num == seq_bases):
+                        seq_bases += 1
+                        seq_bound_window = min(self.segmentCount+1, seq_bases + self.windowSize) - seq_bases
+                        logger.log(f"[!] [CLIENT {client_no}] ACK {ack_num} received, move window to {seq_bases}")
+                    elif ack_num > seq_bases:
+                        logger.log(f"[!] [CLIENT {client_no}] ACK {ack_num} received, move window to {ack_num + 1}")
+                        seq_bases = ack_num + 1
+                        seq_bound_window = min(self.segmentCount+1, seq_bases + self.windowSize) - seq_bases
+                    else:
+                        logger.log(f"[!] [CLIENT {client_no}] ACK {ack_num} below seq_bases {seq_bases} received, ignore")
                     
                 except socket.timeout:
                     MAX_NOT_RECEIVING_TIMEOUT = 10
@@ -179,16 +186,16 @@ class Server:
         try:
             logger.log(f"[!] [CLIENT {client_no}] SYN-ACK sent, waiting for ACK")
             addr, ack_segment, checksum_status = self.connection.listen_single_segment()
-            if addr == client_addr and checksum_status:
-                if ack_segment.get_flag()["ack"]:
-                    logger.log(f"[!] [CLIENT {client_no}] ACK received, handshake completed")
-                    return True
-                else:
-                    logger.log(f"[!] [CLIENT {client_no}] ACK not received, handshake failed")
-                    return False
-            else:
+            if not checksum_status or addr != client_addr:
                 err = "Receive segment from different address" if addr != client_addr else "Invalid checksum"
                 logger.log(f"[!] [CLIENT {client_no}] {err}, handshake failed")
+                return False
+            
+            if ack_segment.get_flag()["ack"]:
+                logger.log(f"[!] [CLIENT {client_no}] ACK received, handshake completed")
+                return True
+            else:
+                logger.log(f"[!] [CLIENT {client_no}] ACK not received, handshake failed")
                 return False
         except socket.timeout as e:
             logger.log(f"[!] [CLIENT {client_no}] timeout, handshake failed {e}")

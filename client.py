@@ -54,30 +54,35 @@ class Client:
                     logger.log(f"[!] Packet received from {addr[0]}:{addr[1]}. Ignoring..")
                 else:
                     listening = False  
+
                 if (time.time() - start_time > self.handshake_timeout):
                     raise socket.timeout("timed out")
-            if checksum_status:
-                if syn_ack_segment.get_flag()["syn"] and syn_ack_segment.get_flag()["ack"]:
-                    logger.log("[!] SYN-ACK received")
 
-                    logger.log("[!] Checking enable metadata flag...")
-                    payload = syn_ack_segment.get_payload()
-                    if payload == (b"\xff" * 10):
-                        logger.log("[!] File metadata enabled")
-                        self.metadata_enabled = True
-                    else:
-                        logger.log("[!] File metadata disabled")
-
-                    ack_segment = Segment()
-                    ack_segment.set_flag([segment.ACK_FLAG])
-                    self.connection.send_data(ack_segment, self.server_addr)
-                    logger.log("[!] ACK sent")
-                    logger.log("[!] Connection established")
-                else:
-                    logger.log("[!] Connection failed")
-            else:
+            if not checksum_status:
                 logger.critical("[!!!] CHECKSUM FAILED")
                 logger.log("[!] Connection failed")
+                return
+
+            if not syn_ack_segment.get_flag()["syn"] or not syn_ack_segment.get_flag()["ack"]:
+                logger.log("[!] Connection failed")
+                return
+
+            logger.log("[!] SYN-ACK received")
+            logger.log("[!] Checking enable metadata flag...")
+            
+            payload = syn_ack_segment.get_payload()
+            if payload == (b"\xff" * 10):
+                logger.log("[!] File metadata enabled")
+                self.metadata_enabled = True
+            else:
+                logger.log("[!] File metadata disabled")
+
+            ack_segment = Segment()
+            ack_segment.set_flag([segment.ACK_FLAG])
+            self.connection.send_data(ack_segment, self.server_addr)
+
+            logger.log("[!] ACK sent")
+            logger.log("[!] Connection established")
         except socket.timeout as e:
             logger.log(f"[!] Connection timeout: {str(e)}")
             exit(1)
@@ -103,10 +108,12 @@ class Client:
                 if addr != self.server_addr:
                     logger.log("[!] Segment not from server, ignore")
                     continue
+
                 if not checksum_status:
                     logger.log("[!] Checksum failed, ignore")
                     logger.critical("[!!!] CHECKSUM FAILED")
                     continue
+
                 if segment.get_flag()["fin"]:
                     logger.log("[!] FIN received, stop")
                     stop = True
@@ -130,6 +137,7 @@ class Client:
                 if (time.time() - last_segment_time > MAX_NOT_RECEIVING_TIMEOUT):
                     logger.warning(f"[!!!] Too many timeout, stop")
                     exit(1)
+
                 logger.log(f"[!] Connection timeout")
                 if (cur_num > 0):
                     logger.log(f"[!] Resend ACK for seq {cur_num-1}")
@@ -145,10 +153,12 @@ class Client:
                 if addr != self.server_addr:
                     logger.log("[!] Metadata segment not from server, ignore")
                     continue
+
                 if not checksum_status:
                     logger.log("[!] Metadata checksum failed, ignore")
                     logger.critical("[!!!] CHECKSUM FAILED")
                     continue
+
                 if not segment.get_flag()["met"]:
                     logger.log("[!] Segment is not metadata, ignore")
                     continue
@@ -163,6 +173,7 @@ class Client:
                 logger.log(f"[!] Extension: {ext}")
                 logger.log("[!] ----- END OF METADATA -----")
                 break
+
             except socket.timeout:
                 logger.log(f"[!] Metadata connection timeout")
                 break
